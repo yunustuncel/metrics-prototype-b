@@ -742,7 +742,7 @@ function submitMetric(){
   if(!valid) return;
   let s=services.find(x=>x.ns===nsName);
   if(!s){ s={ id:'ns'+Date.now(), name:nsName.split('.')[0].replace(/^\w/,c=>c.toUpperCase()), ns:nsName, open:true, syncRec:false, autoOn:false, sel:new Set(), metrics:[] }; services.push(s); }
-  s.metrics.push({ m:name, cat:'—', unit, agg, tag:false, on:true, use:5, source:'custom' });
+  s.metrics.push({ m:name, cat:'—', unit, agg, tag:!!label, on:true, use:5, source:'custom' });
   s.open=true; closeModal(); saveState(); render(); showToast('Custom metric added to ' + s.name);
 }
 function resetState(){ if(confirm('Reset to defaults? All changes will be lost.')) { localStorage.removeItem(STORAGE_KEY); location.reload(); } }
