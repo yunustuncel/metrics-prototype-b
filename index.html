@@ -472,8 +472,9 @@ function render(){
     const selArr = [...s.sel];
     const selCount = selArr.length;
     const removable = selCount>0 && selArr.every(gi => s.metrics[gi].source==='custom');
-    const allOn = vf.length>0 && vf.every(m=>m.on);
-    const someOn = vf.some(m=>m.on);
+    const effOn = m => (m.source==='rec' && s.syncRec) ? true : m.on;
+    const allOn = vf.length>0 && vf.every(m=>effOn(m));
+    const someOn = vf.some(m=>effOn(m));
 
     const mfArr = metricFilters[s.id] || [];
     const mfChipHtml = mfArr.map((f,i)=>`<span class="chip">${filterLabel(f)}<span class="x" onclick="event.stopPropagation();removeMetricFilter('${s.id}',${i})">${svg.x}</span></span>`).join('');
@@ -522,7 +523,7 @@ function render(){
   renderFilterChips();
   services.forEach(s => {
     const cb = document.getElementById('selall-' + s.id);
-    if (cb) { const vf = visibleFiltered(s); const on = vf.some(m=>m.on); const all = vf.length>0 && vf.every(m=>m.on); cb.indeterminate = on && !all; }
+    if (cb) { const vf = visibleFiltered(s); const eff = m => (m.source==='rec' && s.syncRec) ? true : m.on; const on = vf.some(m=>eff(m)); const all = vf.length>0 && vf.every(m=>eff(m)); cb.indeterminate = on && !all; }
   });
 }
 
@@ -799,7 +800,10 @@ document.addEventListener('click', e => {
 
 function toggleAllMetrics(id, val) {
   const s = services.find(x => x.id === id);
-  visibleFiltered(s).forEach(m => { m.on = val; });
+  visibleFiltered(s).forEach(m => {
+    if (m.source === 'rec' && s.syncRec) return;
+    m.on = val;
+  });
   saveState(); render();
 }
 
