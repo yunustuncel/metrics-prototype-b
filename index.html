@@ -40,13 +40,13 @@
   .outer { border: 1px solid var(--border); border-radius: 11px; overflow: hidden; background: var(--panel); }
   table.outer-tbl { width: 100%; border-collapse: collapse; table-layout: fixed; }
   .outer-tbl col.c-svc { width: 320px; } .outer-tbl col.c-mon { width: 80px; } .outer-tbl col.c-cus { width: 70px; }
-  .outer-tbl col.c-mode { width: 90px; } .outer-tbl col.c-sync { width: 116px; }
+  .outer-tbl col.c-mode { width: 90px; } .outer-tbl col.c-sync { width: 190px; }
   .mode-select { background: var(--panel-2); color: var(--text); border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 5px 10px; font-size: 12px; font-family: var(--sans); cursor: pointer; outline: none; width: 100%; }
   .th-with-info { display: inline-flex; align-items: center; gap: 5px; }
   .info-btn { background: none; border: none; padding: 0; cursor: pointer; color: var(--text-mute); display: inline-flex; align-items: center; line-height: 1; }
   .info-btn:hover { color: var(--text-dim); background: none; }
   .info-btn svg { width: 13px; height: 13px; }
-  .info-popover { position: absolute; z-index: 200; background: var(--panel); border: 1px solid var(--border-strong); border-radius: 10px; padding: 14px 16px; width: 310px; box-shadow: 0 8px 24px rgba(0,0,0,.45); font-size: 12px; line-height: 1.6; }
+  .info-popover { position: absolute; z-index: 200; background: var(--panel); border: 1px solid var(--border-strong); border-radius: 10px; padding: 14px 16px; width: 310px; box-shadow: 0 8px 24px rgba(0,0,0,.45); font-size: 12px; line-height: 1.6; text-align: left; }
   .info-popover h4 { margin: 0 0 10px; font-size: 12px; color: var(--text-dim); letter-spacing: 0; font-weight: 600; }
   .info-popover .mode-row { margin-bottom: 10px; }
   .info-popover .mode-row:last-child { margin-bottom: 0; }
@@ -213,13 +213,13 @@
       <th>Service</th><th style="position:relative"><span class="th-with-info">Metric collection mode<button class="info-btn" onclick="toggleModeInfo(event)" aria-label="Mode info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="8" stroke-linecap="round"/><line x1="12" y1="11" x2="12" y2="17" stroke-linecap="round"/></svg></button></span>
         <div class="info-popover" id="modeInfoPopover" style="display:none;top:36px;left:0;">
           <h4>Metric collection modes</h4>
-          <div class="mode-row"><div class="mode-name">User-defined</div><div class="mode-desc">Customize which metrics to collect. Use the Dynatrace sync toggle to lock recommended metrics on (Dynatrace-managed) or turn it off to control each one individually.</div></div>
+          <div class="mode-row"><div class="mode-name">User-defined</div><div class="mode-desc">Customize which metrics to collect. Use the Sync with Dynatrace recommendation toggle to lock recommended metrics on (Dynatrace-managed) or turn it off to control each one individually.</div></div>
           <div class="mode-row"><div class="mode-name">Autodiscovery</div><div class="mode-desc">Ingests all discovered metrics automatically. Best for full coverage with no manual selection.</div></div>
         </div>
       </th>
       <th class="center" style="position:relative">
-        <span class="th-with-info" style="justify-content:center">Dynatrace sync<button class="info-btn" onclick="toggleColInfo(event,'syncColInfo')" aria-label="Sync info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="8" stroke-linecap="round"/><line x1="12" y1="11" x2="12" y2="17" stroke-linecap="round"/></svg></button></span>
-        <div class="info-popover col-info-popover" id="syncColInfo" style="display:none;top:40px;left:0;width:270px;"><h4>Dynatrace sync</h4><div style="color:var(--text-dim)">When on, Dynatrace automatically keeps recommended metrics active and up to date with future additions. Turn off to control each recommended metric individually.</div></div>
+        <span class="th-with-info" style="justify-content:center">Sync with Dynatrace recommendation<button class="info-btn" onclick="toggleColInfo(event,'syncColInfo')" aria-label="Sync info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="8" stroke-linecap="round"/><line x1="12" y1="11" x2="12" y2="17" stroke-linecap="round"/></svg></button></span>
+        <div class="info-popover col-info-popover" id="syncColInfo" style="display:none;top:40px;left:0;width:270px;"><h4>Sync with Dynatrace recommendation</h4><div style="color:var(--text-dim)">When on, Dynatrace automatically keeps recommended metrics active and up to date with future additions. Turn off to control each recommended metric individually.</div></div>
       </th>
       <th class="center" style="position:relative">
         <span class="th-with-info" style="justify-content:center">Recommended<button class="info-btn" onclick="toggleColInfo(event,'recColInfo')" aria-label="Recommended info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="8" stroke-linecap="round"/><line x1="12" y1="11" x2="12" y2="17" stroke-linecap="round"/></svg></button></span>
