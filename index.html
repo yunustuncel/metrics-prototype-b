@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Metrics selection prototype (B)</title>
+<style>
+  :root {
+    --bg: #16161a; --panel: #1c1d23; --panel-2: #23242c; --row-hover: #262832; --row-sel: #202a44;
+    --border: #33343e; --border-strong: #43444f;
+    --text: #e8e9ee; --text-dim: #9a9ba6; --text-mute: #6c6d78;
+    --accent: #4a7cff; --accent-bg: #1e2740; --accent-text: #93b4ff; --accent-border: #2f4372;
+    --green: #3ecf8e; --green-bg: #16302a; --green-text: #6be0ad;
+    --danger: #ef5a5a; --radius: 7px;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 13px; line-height: 1.5; padding: 24px; }
+  .wizard-head { color: var(--text-mute); font-size: 22px; font-weight: 500; margin: 0 0 4px; }
+  .step { display: flex; align-items: center; gap: 10px; color: var(--text-dim); margin: 18px 0; }
+  .step .num { width: 22px; height: 22px; border-radius: 5px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+  .step .title { font-size: 15px; font-weight: 500; color: var(--text); }
+
+  .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
+  .filterbar { flex: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; border: 1px solid var(--border); border-radius: var(--radius); padding: 7px 10px; min-height: 38px; background: var(--panel); cursor: text; }
+  .chip { background: var(--panel-2); color: var(--text); padding: 3px 8px; border-radius: 5px; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; border: 1px solid var(--border-strong); }
+  .chip .x { cursor: pointer; opacity: .7; } .chip .x:hover { opacity: 1; }
+  .filter-input { background: transparent; border: none; color: var(--text); outline: none; font-size: 13px; font-family: var(--sans); min-width: 120px; flex: 1; }
+  .filter-input::placeholder { color: var(--text-mute); }
+
+  button { font-family: var(--sans); font-size: 13px; cursor: pointer; border-radius: var(--radius); border: 1px solid var(--border-strong); background: var(--panel-2); color: var(--text); padding: 8px 12px; display: inline-flex; align-items: center; gap: 6px; transition: background .12s; }
+  button:hover { background: var(--row-hover); } button:active { transform: scale(.98); }
+  button:disabled { opacity: .4; cursor: not-allowed; } button:disabled:hover { background: var(--panel-2); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; } button.primary:hover { background: #5b89ff; }
+  button.sm { padding: 5px 10px; font-size: 12px; }
+  button.danger { color: #f19a9a; } button.danger:hover:not(:disabled) { background: #3a2222; border-color: #6a3333; }
+  button.ghost { border-color: transparent; background: transparent; } button.ghost:hover { background: var(--row-hover); }
+
+  .outer { border: 1px solid var(--border); border-radius: 11px; overflow: hidden; background: var(--panel); }
+  table.outer-tbl { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .outer-tbl col.c-svc { width: 320px; } .outer-tbl col.c-mon { width: 80px; } .outer-tbl col.c-cus { width: 70px; }
+  .outer-tbl col.c-mode { width: 90px; }
+  .mode-select { background: var(--panel-2); color: var(--text); border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 5px 10px; font-size: 12px; font-family: var(--sans); cursor: pointer; outline: none; width: 100%; }
+  .th-with-info { display: inline-flex; align-items: center; gap: 5px; }
+  .info-btn { background: none; border: none; padding: 0; cursor: pointer; color: var(--text-mute); display: inline-flex; align-items: center; line-height: 1; }
+  .info-btn:hover { color: var(--text-dim); background: none; }
+  .info-btn svg { width: 13px; height: 13px; }
+  .info-popover { position: absolute; z-index: 200; background: var(--panel); border: 1px solid var(--border-strong); border-radius: 10px; padding: 14px 16px; width: 310px; box-shadow: 0 8px 24px rgba(0,0,0,.45); font-size: 12px; line-height: 1.6; }
+  .info-popover h4 { margin: 0 0 10px; font-size: 12px; color: var(--text-dim); letter-spacing: 0; font-weight: 600; }
+  .info-popover .mode-row { margin-bottom: 10px; }
+  .info-popover .mode-row:last-child { margin-bottom: 0; }
+  .info-popover .mode-name { font-weight: 600; color: var(--accent-text); margin-bottom: 2px; }
+  .info-popover .mode-desc { color: var(--text-dim); }
+  .mode-select:focus { border-color: var(--accent); }
+  .outer-tbl thead th { text-align: left; font-size: 11px; font-weight: 500; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; padding: 13px 15px; border-bottom: 1px solid var(--border); background: var(--panel-2); vertical-align: middle; }
+  .outer-tbl thead th.center { text-align: center; }
+
+  .svc-summary { cursor: pointer; }
+  .svc-summary:hover > td { background: var(--row-hover); }
+  .svc-summary > td { padding: 13px 15px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .svc-summary.expanded > td { border-bottom: none; }
+  .svc-left { display: flex; align-items: center; gap: 11px; }
+  .chevron { transition: transform .18s; display: inline-block; color: var(--text-dim); flex-shrink: 0; }
+  .chevron.open { transform: rotate(90deg); }
+  .svc-name { font-weight: 500; font-size: 14px; } .svc-ns { color: var(--text-mute); font-size: 11px; font-family: var(--mono); }
+  .badge { padding: 2px 9px; border-radius: 20px; font-size: 12px; }
+  .badge.accent { background: var(--accent-bg); color: var(--accent-text); } .badge.off { background: var(--panel-2); color: var(--text); }
+  .badge.green { background: var(--green-bg); color: var(--green-text); border: 1px solid var(--green); }
+  .metric-count { font-size: 12px; font-variant-numeric: tabular-nums; }
+  .metric-count .n { font-weight: 400; }
+  .metric-count .n.green { color: var(--green-text); }
+  .metric-count .n.blue { color: var(--accent-text); }
+  .metric-count .n.grey { color: var(--text); }
+  .metric-count .sep { color: var(--text-mute); }
+  .metric-count .total { color: var(--text); }
+
+  .ctrl { display: flex; align-items: center; gap: 8px; color: var(--text-dim); font-size: 12px; justify-content: center; }
+  .toggle { position: relative; width: 34px; height: 19px; border-radius: 11px; background: var(--border-strong); border: none; cursor: pointer; padding: 0; transition: background .15s; flex-shrink: 0; }
+  .toggle.on { background: var(--accent); }
+  .toggle .knob { position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 50%; background: #fff; transition: left .15s; }
+  .toggle.on .knob { left: 17px; }
+
+  .nested-row > td { padding: 0; border-bottom: 1px solid var(--border); background: var(--bg); }
+  .nested-row.collapsed { display: none; }
+  .detail-inset { margin: 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+
+  .auto-banner { display: flex; align-items: flex-start; gap: 10px; padding: 12px 15px; background: var(--accent-bg); border-bottom: 1px solid var(--accent-border); color: var(--accent-text); font-size: 12px; }
+  .auto-banner svg.i { flex-shrink: 0; margin-top: 1px; }
+  .auto-banner strong { color: #cfe0ff; font-weight: 500; }
+
+  .metrics-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 15px; border-bottom: 1px solid var(--border); }
+  .metrics-toolbar .add-btn { margin-left: auto; font-size: 12px; padding: 5px 10px; border-color: var(--border); }
+  .inner-filterbar { flex:1; display:flex; align-items:center; gap:5px; flex-wrap:wrap; border:1px solid var(--border); border-radius:var(--radius); padding:4px 8px; min-height:32px; background:var(--panel-2); cursor:text; position:relative; }
+  .inner-filterbar:focus-within { border-color:var(--accent); }
+  .inner-filterbar input { background:transparent; border:none; color:var(--text); outline:none; font-size:12px; font-family:var(--sans); min-width:80px; flex:1; }
+  .inner-filterbar input::placeholder { color:var(--text-mute); }
+  .fp { position:fixed; z-index:500; background:var(--panel); border:1px solid var(--border-strong); border-radius:10px; box-shadow:0 8px 32px rgba(0,0,0,.55); width:340px; overflow:hidden; }
+  .fp-breadcrumb { display:flex; align-items:center; gap:6px; padding:8px 14px; background:var(--panel-2); border-bottom:1px solid var(--border); font-size:12px; color:var(--text-dim); }
+  .fp-breadcrumb .fp-bc-seg { color:var(--accent-text); font-weight:500; }
+  .fp-breadcrumb .fp-bc-sep { color:var(--text-mute); }
+  .fp-section { font-size:10px; color:var(--text-mute); text-transform:uppercase; letter-spacing:.5px; padding:8px 14px 4px; }
+  .fp-item { display:flex; align-items:center; gap:10px; padding:8px 14px; cursor:pointer; font-size:13px; color:var(--text); }
+  .fp-item:hover { background:var(--row-hover); }
+  .fp-item.fp-active { background:var(--row-hover); }
+  .fp-icon { width:32px; height:18px; background:var(--panel-2); border:1px solid var(--border-strong); border-radius:3px; display:inline-flex; align-items:center; justify-content:center; font-size:9px; color:var(--text-mute); font-family:var(--mono); font-weight:700; flex-shrink:0; }
+  .fp-hint { margin-left:auto; color:var(--text-mute); font-size:11px; }
+  .fp-sep { border:none; border-top:1px solid var(--border); margin:3px 0; }
+  .fp-phrase { display:flex; align-items:center; gap:8px; padding:7px 14px; color:var(--text-dim); font-size:12px; cursor:pointer; }
+  .fp-phrase:hover { background:var(--row-hover); }
+  .fp-kbd { display:flex; gap:14px; padding:6px 14px; border-top:1px solid var(--border); background:var(--panel-2); font-size:10px; color:var(--text-mute); }
+  .fp-kbd kbd { background:var(--panel-2); border:1px solid var(--border-strong); border-radius:3px; padding:1px 5px; font-family:var(--mono); font-size:9px; margin-right:3px; }
+  .sel-count { color: var(--text-dim); font-size: 12px; margin-right: 4px; }
+
+  table.inner-tbl { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  table.inner-tbl thead th { text-align: left; font-size: 11px; font-weight: 500; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; padding: 9px 15px; border-bottom: 1px solid var(--border); }
+  table.inner-tbl tbody td { padding: 10px 15px; border-bottom: 1px solid var(--border); font-size: 12px; vertical-align: middle; }
+  table.inner-tbl tbody tr:last-child td { border-bottom: none; }
+  table.inner-tbl tbody tr:hover { background: var(--row-hover); }
+  table.inner-tbl tbody tr.disabled td.dim { opacity: 1; }
+  .mname { font-family: var(--mono); font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cat { color: var(--text); }
+  .src-tag { font-size: 10px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border-strong); color: var(--text-mute); margin-left: 8px; vertical-align: middle; }
+  .src-custom { color: var(--accent-text); border-color: var(--accent-border); }
+  .type-chip { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; border: 1px solid; }
+  .type-rec { background: var(--green-bg); color: var(--green-text); border-color: var(--green); }
+  .type-avail { background: var(--accent-bg); color: var(--accent-text); border-color: var(--accent-border); }
+  .type-custom { background: var(--panel-2); color: var(--text-dim); border-color: var(--border-strong); }
+  .tagged { color: var(--text); display: inline-flex; align-items: center; gap: 6px; }
+  .check-badge { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--green); background: var(--green-bg); flex-shrink: 0; color: var(--green-text); }
+  .aggs { color: var(--text); font-family: var(--mono); font-size: 11px; }
+  input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+  .consumption { color: var(--text-dim); font-size: 11px; display: inline-flex; align-items: center; gap: 5px; }
+  .bar { width: 42px; height: 5px; border-radius: 3px; background: var(--panel-2); overflow: hidden; display: inline-block; }
+  .bar > span { display: block; height: 100%; background: var(--accent); }
+  .foot { display: flex; align-items: center; justify-content: space-between; padding: 9px 15px; color: var(--text-dim); font-size: 12px; }
+  .row-menu-cell { width: 36px; text-align: center; position: relative; }
+  .kebab-btn { background: none; border: none; padding: 4px 6px; cursor: pointer; color: var(--text-mute); border-radius: 5px; display: inline-flex; align-items: center; opacity: 0; transition: opacity .12s; }
+  .kebab-btn:hover { background: var(--row-hover); color: var(--text); }
+  tr:hover .kebab-btn, .kebab-btn.open { opacity: 1; }
+  .kebab-menu { position: absolute; right: 4px; top: 100%; z-index: 300; background: var(--panel); border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.4); min-width: 130px; padding: 4px; }
+  .kebab-menu button { width: 100%; text-align: left; background: none; border: none; padding: 7px 10px; font-size: 12px; color: var(--text); border-radius: 5px; gap: 8px; }
+  .kebab-menu button:hover { background: var(--row-hover); }
+  .kebab-menu button.danger-item { color: #f19a9a; }
+  .kebab-menu button.danger-item:hover { background: #3a2222; }
+  .empty { padding: 22px 15px; text-align: center; color: var(--text-mute); font-size: 12px; }
+  .selhint { color: var(--text-mute); font-size: 11px; margin-left: auto; }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: flex-start; justify-content: center; padding-top: 70px; z-index: 50; opacity: 0; pointer-events: none; transition: opacity .15s; }
+  .modal-overlay.show { opacity: 1; pointer-events: auto; }
+  .modal { width: 768px; max-width: 92vw; background: var(--panel); border: 1px solid var(--border-strong); border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.5); transform: translateY(-8px); transition: transform .15s; }
+  .modal-overlay.show .modal { transform: translateY(0); }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .modal-head h2 { margin: 0; font-size: 16px; font-weight: 500; }
+  .modal-body { padding: 18px 20px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 12px; margin-bottom: 5px; color: var(--text); }
+  .field .req { color: var(--danger); }
+  .field input[type=text], .field select { width: 100%; background: var(--panel-2); border: 1px solid var(--border-strong); color: var(--text); border-radius: 6px; padding: 9px 11px; font-size: 13px; font-family: var(--sans); outline: none; }
+  .field input[type=text]:focus, .field select:focus { border-color: var(--accent); }
+  .field .hint { font-size: 11px; color: var(--text-mute); margin-top: 5px; }
+  .field .hint.ok { color: var(--green-text); } .field .hint.warn { color: #e6c07a; } .field .hint.err { color: var(--danger); }
+  .field select:disabled, .field input:disabled { opacity: 0.38; cursor: not-allowed; pointer-events: none; }
+  .field.field-locked > label { opacity: 0.5; }
+  .link-box.locked { opacity: 0.35; pointer-events: none; }
+  .ns-back { font-size: 11px; color: var(--accent-text); cursor: pointer; margin-top: 6px; display: inline-flex; align-items: center; gap: 4px; }
+  .suggest { border: 1px solid var(--border-strong); border-top: none; border-radius: 0 0 6px 6px; background: var(--panel-2); max-height: 150px; overflow-y: auto; }
+  .suggest div { padding: 8px 11px; font-family: var(--mono); font-size: 12px; cursor: pointer; border-bottom: 1px solid var(--border); }
+  .suggest div:hover { background: var(--accent-bg); }
+  .ns-field-wrap { position: relative; }
+  .ns-dropdown { position: absolute; top: calc(100% + 2px); left: 0; right: 0; background: var(--panel-2); border: 1px solid var(--border-strong); border-radius: 6px; z-index: 200; overflow: hidden; box-shadow: 0 6px 20px rgba(0,0,0,.4); }
+  .ns-dropdown div { padding: 9px 11px; font-size: 13px; font-family: var(--mono); cursor: pointer; border-bottom: 1px solid var(--border); }
+  .ns-dropdown div:last-child { border-bottom: none; }
+  .ns-dropdown div:hover { background: var(--accent-bg); color: var(--accent-text); }
+  .link-box { background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 13px; font-size: 12px; }
+  .link-box .lb-title { color: var(--text-dim); margin-bottom: 6px; }
+  .link-box .ent { color: var(--accent-text); font-family: var(--mono); font-size: 12px; }
+  .link-box .lbls { color: var(--text-mute); font-family: var(--mono); font-size: 11px; margin-top: 2px; }
+  .tag-enrich-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; color: var(--green-text); font-size: 12px; }
+  .modal-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--border); }
+  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--green-bg); border: 1px solid #1f5a44; color: var(--green-text); padding: 10px 16px; border-radius: var(--radius); font-size: 13px; opacity: 0; pointer-events: none; transition: all .2s; z-index: 60; display: flex; align-items: center; gap: 8px; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  svg.i { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: middle; }
+  .section-sub-row td { border-bottom: 1px solid var(--border); }
+  .section-sub-head { display: flex; align-items: center; justify-content: space-between; padding: 7px 15px; background: var(--panel-2); font-size: 11px; color: var(--text-dim); font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
+  .section-count { background: var(--border-strong); color: var(--text); border-radius: 10px; padding: 0 6px; font-size: 10px; font-weight: 600; margin-left: 5px; }
+  .sync-toggle-label { display: flex; align-items: center; gap: 7px; text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--text); font-size: 12px; cursor: pointer; user-select: none; }
+  .sync-toggle-label .toggle { flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<div class="wizard-head">New connection</div>
+<div class="step"><span class="num">2</span><span class="title">Select observability options</span></div>
+
+<div class="toolbar">
+  <div style="position:relative;flex:1">
+    <div class="filterbar" onclick="document.getElementById('filterInput').focus()">
+      <svg class="i" viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      <span id="filterChips"></span>
+      <input class="filter-input" id="filterInput" placeholder="Filter by name, category, type…" autocomplete="off">
+    </div>
+  </div>
+  <button><svg class="i" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export JSON</button>
+  <button onclick="resetState()" title="Clear saved changes and restore defaults"><svg class="i" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg> Reset</button>
+  <button class="primary" onclick="openModal(null)"><svg class="i" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add metric</button>
+</div>
+
+<div class="outer">
+  <table class="outer-tbl">
+    <colgroup><col class="c-svc"><col class="c-mode"><col class="c-mon"><col class="c-mon"><col class="c-cus"></colgroup>
+    <thead><tr>
+      <th>Service</th><th style="position:relative"><span class="th-with-info">Metric collection mode<button class="info-btn" onclick="toggleModeInfo(event)" aria-label="Mode info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="8" stroke-linecap="round"/><line x1="12" y1="11" x2="12" y2="17" stroke-linecap="round"/></svg></button></span>
+        <div class="info-popover" id="modeInfoPopover" style="display:none;top:36px;left:0;">
+          <h4>Metric collection modes</h4>
+          <div class="mode-row"><div class="mode-name">Recommended</div><div class="mode-desc">All recommended metrics active and synced with Dynatrace. Adding opt-in or custom metrics shifts the label to User-defined.</div></div>
+          <div class="mode-row"><div class="mode-name">User-defined</div><div class="mode-desc">Customize your metric set freely. Re-enable "Sync with Dynatrace updates" from the Recommended section to return to auto-management.</div></div>
+          <div class="mode-row"><div class="mode-name">Autodiscovery</div><div class="mode-desc">Ingests all discovered metrics automatically. Best for full coverage.</div></div>
+        </div>
+      </th><th class="center">Recommended</th><th class="center">Opt-in</th><th class="center">Custom</th>
+    </tr></thead>
+    <tbody id="services"></tbody>
+  </table>
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-head"><h2>Add metric</h2>
+      <button class="ghost" onclick="closeModal()"><svg class="i" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Namespace <span class="req">*</span></label>
+        <div class="ns-field-wrap">
+          <input type="text" id="mNs" placeholder="Select or type a namespace…" autocomplete="off"
+            onfocus="showNsDropdown()" onblur="scheduleHideNsDropdown()" oninput="clearHint('mNsHint')">
+          <div id="nsDropdown" class="ns-dropdown" style="display:none">
+            <div onmousedown="pickNamespace('compute.googleapis.com')">compute.googleapis.com</div>
+            <div onmousedown="pickNamespace('cloudsql.googleapis.com')">cloudsql.googleapis.com</div>
+            <div onmousedown="pickNamespace('storage.googleapis.com')">storage.googleapis.com</div>
+            <div onmousedown="pickNamespace('pubsub.googleapis.com')">pubsub.googleapis.com</div>
+          </div>
+        </div>
+        <div class="hint" id="mNsHint"></div>
+      </div>
+      <div class="field" id="mNameField">
+        <label>Metric name <span class="req">*</span></label>
+        <div id="mNameWrapper"><select id="mName" disabled><option value="" disabled selected>Select a metric…</option></select></div>
+        <div class="hint" id="mHint"></div>
+      </div>
+      <div class="field" id="mAggField"><label>Aggregations <span class="req">*</span></label>
+        <input type="text" id="mAgg" placeholder="e.g. ALIGN_MEAN, ALIGN_RATE" oninput="clearHint('mAggHint')">
+        <div class="hint" id="mAggHint"></div>
+      </div>
+      <div class="field" id="mLabelsField"><label>Labels (dimensions) <span class="req">*</span></label>
+        <div class="ns-field-wrap">
+          <input type="text" id="mLabels" readonly placeholder="Select or type a label…"
+            onfocus="showLabelsDropdown()" onblur="scheduleHideLabelsDropdown()">
+          <div id="labelsDropdown" class="ns-dropdown" style="display:none">
+            <div onmousedown="pickLabel('project_id')">project_id</div>
+            <div onmousedown="pickLabel('instance_id')">instance_id</div>
+            <div onmousedown="pickLabel('zone')">zone</div>
+          </div>
+        </div>
+        <div class="hint" id="mLabelsHint"></div>
+      </div>
+      <div class="link-box"><div class="lb-title">Tag enrichment support</div>
+        <div id="linkContent" style="color:var(--text-mute);">Add labels above to see matching entity types.</div>
+      </div>
+    </div>
+    <div class="modal-foot"><button onclick="closeModal()">Cancel</button><button class="primary" onclick="submitMetric()">Add metric</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><svg class="i" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span id="toastMsg">Metric added</span></div>
+<div id="fp" class="fp" style="display:none"></div>
+
+<script>
+const svg = {
+  chev: '<svg class="i" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>',
+  check: '<svg class="i" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>',
+  radar: '<svg class="i" viewBox="0 0 24 24"><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01"/><circle cx="12" cy="12" r="2"/></svg>',
+  trash: '<svg class="i" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+  x: '<svg class="i" viewBox="0 0 24 24" style="width:12px;height:12px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+};
+
+const STORAGE_KEY = 'metrics-prototype-b-state-v1';
+
+function saveState() {
+  const data = services.map(s => ({
+    ...s,
+    sel: [...s.sel]
+  }));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function loadState(defaults) {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return defaults;
+    return JSON.parse(saved).map(s => {
+      const syncRec = s.syncRec !== undefined ? s.syncRec : (s.recOn !== undefined ? s.recOn : true);
+      const base = { ...s, syncRec, sel: new Set(s.sel), metrics: s.metrics.map(m => ({ ...m, on: m.source === 'rec' ? syncRec : m.on })) };
+      const def = defaults.find(d => d.id === s.id);
+      if (!def) return base;
+      const savedNames = new Set(s.metrics.map(m => m.m));
+      const newMetrics = def.metrics.filter(m => !savedNames.has(m.m));
+      return { ...base, metrics: [...base.metrics, ...newMetrics] };
+    });
+  } catch { return defaults; }
+}
+
+const defaultServices = [
+  { id:'ce', name:'Compute Engine', ns:'compute.googleapis.com', open:true, syncRec:true, autoOn:false, sel:new Set(), metrics:[
+    { m:'instance/cpu/utilization', cat:'CPU', unit:'ratio', agg:'ALIGN_MEAN +2', tag:true, on:true, use:80, source:'rec' },
+    { m:'instance/cpu/reserved_cores', cat:'CPU', unit:'1', agg:'ALIGN_MEAN, ALIGN_MAX', tag:true, on:true, use:35, source:'rec' },
+    { m:'instance/disk/read_bytes_count', cat:'Disk', unit:'By', agg:'ALIGN_RATE +2', tag:true, on:true, use:60, source:'rec' },
+    { m:'instance/disk/write_bytes_count', cat:'Disk', unit:'By', agg:'ALIGN_RATE +2', tag:true, on:true, use:55, source:'rec' },
+    { m:'instance/network/received_bytes', cat:'Network', unit:'By', agg:'ALIGN_RATE +2', tag:true, on:true, use:48, source:'rec' },
+    { m:'instance/network/sent_bytes', cat:'Network', unit:'By', agg:'ALIGN_RATE +2', tag:false, on:true, use:44, source:'rec' },
+    { m:'instance/uptime', cat:'Uptime', unit:'s', agg:'ALIGN_DELTA, ALIGN_SUM', tag:true, on:true, use:12, source:'rec' },
+    { m:'instance/memory/balloon', cat:'Memory', unit:'By', agg:'ALIGN_MEAN', tag:true, on:false, use:20, source:'disc' },
+    { m:'instance/disk/operation_count', cat:'Disk', unit:'1', agg:'ALIGN_RATE', tag:true, on:false, use:15, source:'disc' },
+    { m:'firewall/dropped_bytes_count', cat:'Network', unit:'By', agg:'ALIGN_RATE', tag:false, on:false, use:8, source:'disc' },
+    { m:'instance/integrity_monitoring/late_boot_report_count', cat:'Security', unit:'1', agg:'ALIGN_SUM', tag:false, on:false, use:5, source:'avail' },
+    { m:'instance/guest_visible_vcpus', cat:'CPU', unit:'1', agg:'ALIGN_MEAN', tag:true, on:false, use:10, source:'avail' },
+    { m:'instance/network/packet_loss', cat:'Network', unit:'ratio', agg:'ALIGN_MEAN', tag:true, on:false, use:7, source:'avail' },
+    { m:'instance/cpu/scheduler_wait_time', cat:'CPU', unit:'ns', agg:'ALIGN_MEAN', tag:false, on:false, use:18, source:'avail' },
+    { m:'instance/disk/throttled_bps', cat:'Disk', unit:'By/s', agg:'ALIGN_MEAN', tag:false, on:false, use:9, source:'avail' },
+    { m:'instance/memory/page_fault_count', cat:'Memory', unit:'1', agg:'ALIGN_RATE', tag:false, on:false, use:14, source:'avail' },
+  ]},
+  { id:'sql', name:'Cloud SQL', ns:'cloudsql.googleapis.com', open:false, syncRec:true, autoOn:false, sel:new Set(), metrics:[
+    { m:'database/cpu/utilization', cat:'CPU', unit:'ratio', agg:'ALIGN_MEAN', tag:true, on:true, use:70, source:'rec' },
+    { m:'database/memory/usage', cat:'Memory', unit:'By', agg:'ALIGN_MEAN', tag:true, on:true, use:58, source:'rec' },
+    { m:'database/disk/utilization', cat:'Disk', unit:'ratio', agg:'ALIGN_MEAN', tag:true, on:true, use:40, source:'rec' },
+    { m:'database/network/connections', cat:'Network', unit:'1', agg:'ALIGN_MEAN', tag:false, on:true, use:33, source:'rec' },
+    { m:'database/uptime', cat:'Uptime', unit:'s', agg:'ALIGN_SUM', tag:true, on:true, use:9, source:'rec' },
+    { m:'database/replication/lag', cat:'Replication', unit:'s', agg:'ALIGN_MEAN', tag:true, on:false, use:11, source:'disc' },
+    { m:'database/disk/read_ops_count', cat:'Disk', unit:'1', agg:'ALIGN_RATE', tag:false, on:false, use:6, source:'disc' },
+    { m:'database/postgresql/num_backends', cat:'Connections', unit:'1', agg:'ALIGN_MEAN', tag:true, on:false, use:14, source:'avail' },
+    { m:'database/auto_failover/request_count', cat:'Availability', unit:'1', agg:'ALIGN_SUM', tag:false, on:false, use:4, source:'avail' },
+    { m:'database/disk/write_ops_count', cat:'Disk', unit:'1', agg:'ALIGN_RATE', tag:true, on:false, use:22, source:'avail' },
+    { m:'database/memory/quota', cat:'Memory', unit:'By', agg:'ALIGN_MEAN', tag:false, on:false, use:31, source:'avail' },
+    { m:'database/network/received_bytes_count', cat:'Network', unit:'By', agg:'ALIGN_RATE', tag:false, on:false, use:17, source:'avail' },
+  ]}
+];
+
+const services = loadState(defaultServices);
+
+let filters = []; // outer: array of {key,op,value} or plain strings
+const metricFilters = {}; // inner: {svcId: [{key,op,value}|string]}
+const known = ['instance/cpu/utilization','instance/cpu/reserved_cores','instance/disk/read_bytes_count','instance/disk/write_bytes_count','instance/network/received_bytes','instance/network/sent_bytes','instance/uptime','instance/memory/balloon','instance/disk/operation_count','firewall/dropped_bytes_count'];
+const knownByNs = {
+  'compute.googleapis.com': ['instance/cpu/utilization','instance/cpu/reserved_cores','instance/disk/read_bytes_count','instance/disk/write_bytes_count','instance/network/received_bytes','instance/network/sent_bytes','instance/uptime','instance/memory/balloon','instance/disk/operation_count','firewall/dropped_bytes_count'],
+  'cloudsql.googleapis.com': ['database/cpu/utilization','database/memory/usage','database/disk/utilization','database/network/connections','database/uptime','database/replication/lag','database/disk/read_ops_count','database/postgresql/num_backends','database/auto_failover/request_count'],
+  'storage.googleapis.com': ['storage/object_count','storage/total_bytes','storage/api/request_count','storage/bucket/object_count','storage/bucket/total_bytes'],
+  'pubsub.googleapis.com': ['topic/send_message_operation_count','subscription/pull_request_count','subscription/num_undelivered_messages','topic/byte_cost','subscription/oldest_unacked_message_age'],
+};
+
+// Filter key definitions
+const FK = [
+  { key:'type',            label:'Metric type',      hint:'Type',     values:()=>['Recommended','Opt-in','Custom'] },
+  { key:'category',        label:'Category',         hint:'Category', values:(sid)=>[...new Set(mPool(sid).map(m=>m.cat).filter(c=>c!=='—'))] },
+  { key:'unit',            label:'Unit',             hint:'Unit',     values:(sid)=>[...new Set(mPool(sid).map(m=>m.unit).filter(u=>u!=='—'))] },
+  { key:'aggregations',    label:'Aggregations',     hint:'Agg',      values:()=>['ALIGN_MEAN','ALIGN_MAX','ALIGN_RATE','ALIGN_SUM','ALIGN_DELTA'] },
+  { key:'tag enrichment',  label:'Tag enrichment',   hint:'Tag',      values:()=>['Supported','Not supported'] },
+  { key:'ingest volume estimation', label:'Ingest volume estimation',  hint:'Ingest',   values:()=>['High','Medium','Low'] },
+];
+function mPool(sid){ return sid ? (services.find(x=>x.id===sid)?.metrics||[]) : services.flatMap(s=>s.metrics); }
+
+function evalFilter(f, m){
+  if(typeof f==='string'){ const v=f.toLowerCase(); return m.m.toLowerCase().includes(v)||m.cat.toLowerCase().includes(v); }
+  const {key,op,value} = f;
+  let match = false;
+  if(key==='type')            match = m.source===(value==='Recommended'?'rec':value==='Opt-in'?'avail':'custom');
+  else if(key==='category')   match = m.cat===value;
+  else if(key==='unit')       match = m.unit===value;
+  else if(key==='aggregations') match = m.agg.includes(value);
+  else if(key==='tag enrichment') match = value==='Supported'?m.tag:!m.tag;
+  else if(key==='ingest volume estimation'){ const lv=m.use>60?'High':m.use>30?'Medium':'Low'; match=lv===value; }
+  return op==='='?match:!match;
+}
+function filterLabel(f){ return typeof f==='string'?f:`${f.key} ${f.op} ${f.value}`; }
+function passFilter(m){ return !filters.length || filters.every(f=>evalFilter(f,m)); }
+function passMetricFilter(m, arr){ return !arr||!arr.length || arr.every(f=>evalFilter(f,m)); }
+
+function visibleMetrics(s){
+  if(s.autoOn) return s.metrics.filter(m => m.source === 'custom');
+  return s.metrics.filter(m => m.source !== 'disc');
+}
+
+function getModeValue(s) {
+  if (s.autoOn) return 'auto';
+  const hasOptIn = s.metrics.some(m => m.source === 'avail' && m.on);
+  const hasCustom = s.metrics.some(m => m.source === 'custom');
+  if (s.syncRec && !hasOptIn && !hasCustom) return 'rec';
+  return 'user';
+}
+const sourceOrder = { rec: 0, custom: 1, avail: 2, disc: 3 };
+function visibleFiltered(s){
+  const mf = metricFilters[s.id] || [];
+  return visibleMetrics(s).filter(m => passFilter(m) && passMetricFilter(m, mf))
+    .sort((a,b) => (sourceOrder[a.source]??9) - (sourceOrder[b.source]??9));
+}
+
+function render(){
+  const root = document.getElementById('services');
+  root.innerHTML = services.map(s => {
+    const vis = visibleMetrics(s);
+    const monCount = vis.filter(m=>m.on).length;
+    const recEnabled = s.metrics.filter(m=>m.source==='rec' && m.on).length;
+    const recTotal   = s.metrics.filter(m=>m.source==='rec').length;
+    const availEnabled = s.metrics.filter(m=>m.source==='avail' && m.on).length;
+    const availTotal   = s.metrics.filter(m=>m.source==='avail').length;
+    const customEnabled = s.metrics.filter(m=>m.source==='custom' && m.on).length;
+    const customTotal   = s.metrics.filter(m=>m.source==='custom').length;
+    const recCount = recEnabled; const availCount = availEnabled; const customCount = customEnabled;
+    // prune selection to visible rows
+    [...s.sel].forEach(gi => { if(!vis.includes(s.metrics[gi])) s.sel.delete(gi); });
+
+    const vf = visibleFiltered(s);
+    const renderMetricRow = (m) => {
+      const gi = s.metrics.indexOf(m);
+      const typeChip = m.source==='rec' ? '<span class="type-chip type-rec">Recommended</span>' : m.source==='avail' ? '<span class="type-chip type-avail">Opt-in</span>' : m.source==='custom' ? '<span class="type-chip type-custom">Custom</span>' : '';
+      const recLocked = m.source==='rec' && s.syncRec;
+      const effectiveOn = recLocked ? true : m.on;
+      const rowDisabled = m.source !== 'rec' && !m.on;
+      return `<tr class="${rowDisabled?'disabled':''}">
+        <td style="width:34px"><input type="checkbox" ${effectiveOn?'checked':''} ${recLocked?'disabled':''} onchange="toggleMetric('${s.id}',${gi})"></td>
+        <td class="mname dim" title="${m.m}">${m.m}</td>
+        <td>${typeChip}</td>
+        <td class="cat dim">${m.cat==='—'?'<span style="color:var(--text-mute)">—</span>':m.cat}</td>
+        <td class="dim">${m.unit==='—'?'<span style="color:var(--text-mute)">—</span>':m.unit}</td>
+        <td class="aggs dim">${m.agg}</td>
+        <td class="dim">${m.tag ? '<span class="tagged"><span class="check-badge">'+svg.check+'</span> Supported</span>' : '<span style="color:var(--text-mute)">—</span>'}</td>
+        <td class="dim">${m.source==='custom'?'<span style="color:var(--text-mute)">—</span>':`${m.use>60?'High':m.use>30?'Medium':'Low'}`}</td>
+        <td class="row-menu-cell" onclick="event.stopPropagation()">${m.source==='custom' ? `<button class="kebab-btn" onclick="toggleKebab(event,'${s.id}',${gi})"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button>` : ''}</td>
+      </tr>`;
+    };
+    const recVf = vf.filter(m => m.source === 'rec');
+    const optInVf = vf.filter(m => m.source === 'avail');
+    const customVf = vf.filter(m => m.source === 'custom');
+    let rows = '';
+    if (!s.autoOn && s.metrics.some(m => m.source === 'rec')) {
+      const recTotal = s.metrics.filter(m => m.source === 'rec').length;
+      rows += `<tr class="section-sub-row"><td colspan="9" style="padding:0"><div class="section-sub-head"><span>Recommended <span class="section-count">${recTotal}</span></span><label class="sync-toggle-label" onclick="event.stopPropagation()"><button class="toggle ${s.syncRec?'on':''}" onclick="event.stopPropagation();toggleSync('${s.id}',${!s.syncRec})"><span class="knob"></span></button>Sync with Dynatrace updates</label></div></td></tr>`;
+      rows += recVf.map(renderMetricRow).join('');
+    }
+    if (!s.autoOn && s.metrics.some(m => m.source === 'avail')) {
+      const optInTotal = s.metrics.filter(m => m.source === 'avail').length;
+      rows += `<tr class="section-sub-row"><td colspan="9" style="padding:0"><div class="section-sub-head"><span>Opt-in <span class="section-count">${optInTotal}</span></span></div></td></tr>`;
+      rows += optInVf.map(renderMetricRow).join('');
+    }
+    if (customVf.length) {
+      rows += `<tr class="section-sub-row"><td colspan="9" style="padding:0"><div class="section-sub-head"><span>Custom <span class="section-count">${customVf.length}</span></span></div></td></tr>`;
+      rows += customVf.map(renderMetricRow).join('');
+    }
+    if (!rows && s.autoOn) rows = '<tr><td colspan="9" class="empty">No custom metrics yet. Use "+ Add metric" to add one.</td></tr>';
+    else if (!rows) rows = '<tr><td colspan="9" class="empty">No metrics match the current filter.</td></tr>';
+
+    const selArr = [...s.sel];
+    const selCount = selArr.length;
+    const removable = selCount>0 && selArr.every(gi => s.metrics[gi].source==='custom');
+    const allOn = vf.length>0 && vf.every(m=>m.on);
+    const someOn = vf.some(m=>m.on);
+
+    const mfArr = metricFilters[s.id] || [];
+    const mfChipHtml = mfArr.map((f,i)=>`<span class="chip">${filterLabel(f)}<span class="x" onclick="event.stopPropagation();removeMetricFilter('${s.id}',${i})">${svg.x}</span></span>`).join('');
+    const canEdit = !s.autoOn;
+    const tableBlock = `
+        <div class="metrics-toolbar">
+          <span class="sel-count">${monCount} of ${vis.length} metrics enabled</span>
+          <div class="inner-filterbar" onclick="event.stopPropagation()">
+            ${mfChipHtml}
+            <input id="mf-${s.id}" placeholder="${mfArr.length?'':'Filter metrics…'}" autocomplete="off"
+              onfocus="fpOpen(event,'inner','${s.id}')"
+              onblur="fpBlur()"
+              oninput="fpInput(this.value)"
+              onkeydown="fpKeydown(event,'inner','${s.id}')">
+          </div>
+          ${!s.autoOn ? `<button class="primary add-btn" onclick="event.stopPropagation();openModal('${s.id}')">+ Add metric</button>` : ''}
+        </div>
+        <table class="inner-tbl">
+          <thead><tr><th style="width:34px">${canEdit ? `<input type="checkbox" id="selall-${s.id}" ${allOn?'checked':''} onclick="event.stopPropagation();toggleAllMetrics('${s.id}',this.checked)" title="Select all">` : ''}</th><th style="width:400px">Metric name</th><th>Type</th><th>Category</th><th>Unit</th><th>Aggregations</th><th>Tag enrichment</th><th style="position:relative"><span class="th-with-info">Ingest volume estimation<button class="info-btn" onclick="toggleIngestInfo(event,'${s.id}')" aria-label="Ingest volume estimation info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;vertical-align:middle;margin-left:3px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="8" stroke-linecap="round"/><line x1="12" y1="11" x2="12" y2="17" stroke-linecap="round"/></svg></button></span><div class="info-popover" id="ingestInfoPopover-${s.id}" style="display:none;top:32px;right:0;left:auto;width:280px;"><h4>Ingest volume estimation</h4><div style="color:var(--text-dim)">An estimate of how much data this metric is expected to generate, based on its cardinality and collection frequency. Use this to anticipate the impact on your ingest budget before enabling a metric.<br><br><strong style="color:var(--text)">High</strong> — significant data volume, likely high-cardinality or high-frequency<br><strong style="color:var(--text)">Med</strong> — moderate volume, typical for most service metrics<br><strong style="color:var(--text)">Low</strong> — minimal volume, usually low-cardinality or infrequently emitted</div></div></th><th style="width:36px"></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="foot"><span>50 rows per page</span><span>Page 1 of 1</span></div>`;
+    const body = s.autoOn ? `
+        <div class="auto-banner">${svg.radar}<div><strong>Autodiscovery is on.</strong> All metrics discovered will be ingested.</div></div>
+        ${tableBlock}`
+      : tableBlock;
+
+    return `
+    <tr class="svc-summary ${s.open?'expanded':''}" onclick="toggleService('${s.id}')">
+      <td>
+        <div class="svc-left">
+          <span class="chevron ${s.open?'open':''}">${svg.chev}</span>
+          <div><div class="svc-name">${s.name}</div><div class="svc-ns">${s.ns}</div></div>
+        </div>
+      </td>
+      <td onclick="event.stopPropagation()">${(()=>{ const mv=getModeValue(s); return `<select class="mode-select" onchange="setMode('${s.id}', this.value)"><option value="rec" ${mv==='rec'?'selected':''}>Recommended</option><option value="user" ${mv==='user'?'selected':''}>User-defined</option><option value="auto" ${mv==='auto'?'selected':''}>Autodiscovery</option></select>`; })()}</td>
+      <td style="text-align:center">${s.autoOn ? '<span style="color:var(--text-mute)">—</span>' : `<span class="metric-count"><span class="n grey">${recEnabled}</span><span class="sep">/</span><span class="total">${recTotal}</span></span>`}</td>
+      <td style="text-align:center">${s.autoOn ? '<span style="color:var(--text-mute)">—</span>' : `<span class="metric-count"><span class="n grey">${availEnabled}</span><span class="sep">/</span><span class="total">${availTotal}</span></span>`}</td>
+      <td style="text-align:center">${s.autoOn ? '<span style="color:var(--text-mute)">—</span>' : `<span class="metric-count"><span class="n grey">${customEnabled}</span><span class="sep">/</span><span class="total">${customTotal}</span></span>`}</td>
+    </tr>
+    <tr class="nested-row ${s.open?'':'collapsed'}">
+      <td colspan="5"><div class="detail-inset">${body}</div></td>
+    </tr>`;
+  }).join('');
+  renderFilterChips();
+  services.forEach(s => {
+    const cb = document.getElementById('selall-' + s.id);
+    if (cb) { const vf = visibleFiltered(s); const on = vf.some(m=>m.on); const all = vf.length>0 && vf.every(m=>m.on); cb.indeterminate = on && !all; }
+  });
+}
+
+function renderFilterChips(){
+  document.getElementById('filterChips').innerHTML = filters.map((f,i)=>`<span class="chip">${filterLabel(f)}<span class="x" onclick="removeFilter(${i})">${svg.x}</span></span>`).join('');
+}
+function removeFilter(i){ filters.splice(i,1); render(); }
+function removeMetricFilter(sid,i){ const arr=metricFilters[sid]||[]; arr.splice(i,1); metricFilters[sid]=arr; render(); }
+
+// ── Filter Panel (shared for outer + inner) ─────────────────────────────────
+let fpCtx = null; // { type:'outer'|'inner', svcId, step:'key'|'op'|'value', pendingKey, pendingOp, inputEl }
+let fpBlurTimer = null;
+
+function fpOpen(e, type, svcId){
+  clearTimeout(fpBlurTimer);
+  const inp = e.target;
+  fpCtx = { type, svcId: svcId||null, step:'key', pendingKey:null, pendingOp:null, inputEl:inp };
+  fpRender(inp.value);
+  fpPosition(inp);
+}
+function fpBlur(){
+  fpBlurTimer = setTimeout(()=>{ fpClose(); }, 200);
+}
+function fpInput(val){
+  if(!fpCtx) return;
+  if(fpCtx.step==='key') fpRender(val);
+}
+function fpKeydown(e, type, svcId){
+  if(!fpCtx){ fpOpen(e, type, svcId); }
+  if(e.key==='Escape'){ fpClose(); e.target.blur(); return; }
+  if(e.key==='Enter' && fpCtx && fpCtx.step==='key'){
+    const val = e.target.value.trim();
+    if(val){ fpAddFilter(val); e.target.value=''; }
+  }
+  if(e.key==='Backspace' && !e.target.value){
+    const arr = fpCtx.type==='outer' ? filters : (metricFilters[fpCtx.svcId]||[]);
+    if(arr.length){ arr.pop(); if(fpCtx.type==='outer') filters=arr; else metricFilters[fpCtx.svcId]=arr; render(); }
+  }
+}
+function fpClose(){
+  document.getElementById('fp').style.display='none';
+  fpCtx=null;
+}
+function fpPosition(inp){
+  const panel = document.getElementById('fp');
+  panel.style.display='block';
+  const r = inp.closest('.filterbar,.inner-filterbar').getBoundingClientRect();
+  panel.style.left = r.left+'px';
+  panel.style.top  = (r.bottom+4)+'px';
+  panel.style.width = Math.max(340, r.width)+'px';
+}
+function fpRender(inputVal){
+  const panel = document.getElementById('fp');
+  if(!panel||!fpCtx) return;
+  const q = (inputVal||'').toLowerCase();
+  let html = '';
+
+  if(fpCtx.step==='key'){
+    const matched = FK.filter(k=>!q||k.label.toLowerCase().includes(q)||k.key.includes(q));
+    html += `<div class="fp-section">Key suggestions</div>`;
+    html += matched.map(k=>`<div class="fp-item" onmousedown="fpSelectKey('${k.key}')"><span class="fp-icon">ABC</span>${k.label}<span class="fp-hint">${k.hint}</span></div>`).join('');
+    html += `<hr class="fp-sep">`;
+    html += `<div class="fp-phrase" onmousedown="fpAddFilter(document.getElementById('${fpCtx.inputEl.id}').value)"><svg class="i" viewBox="0 0 24 24" style="width:13px;height:13px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search for a phrase</div>`;
+  } else if(fpCtx.step==='op'){
+    html += `<div class="fp-breadcrumb"><span class="fp-bc-seg">${fpCtx.pendingKey}</span></div>`;
+    html += `<div class="fp-section">Operator</div>`;
+    html += ['=','!='].map(op=>`<div class="fp-item" onmousedown="fpSelectOp('${op}')"><span class="fp-icon" style="width:24px">${op}</span>${op==='='?'equals':'not equals'}</div>`).join('');
+  } else if(fpCtx.step==='value'){
+    html += `<div class="fp-breadcrumb"><span class="fp-bc-seg">${fpCtx.pendingKey}</span><span class="fp-bc-sep">${fpCtx.pendingOp}</span></div>`;
+    html += `<div class="fp-section">Value</div>`;
+    const fk = FK.find(k=>k.key===fpCtx.pendingKey);
+    const vals = fk ? fk.values(fpCtx.svcId) : [];
+    html += vals.map(v=>`<div class="fp-item" onmousedown="fpSelectValue('${v.replace(/'/g,"\\'")}')"><span class="fp-icon">ABC</span>${v}</div>`).join('');
+  }
+
+  html += `<div class="fp-kbd"><span><kbd>↵</kbd>Apply</span><span><kbd>↑↓</kbd>Navigate</span><span><kbd>esc</kbd>Close</span></div>`;
+  panel.innerHTML = html;
+}
+function fpSelectKey(key){
+  if(!fpCtx) return;
+  clearTimeout(fpBlurTimer);
+  fpCtx.step='op'; fpCtx.pendingKey=key;
+  fpCtx.inputEl.value='';
+  fpRender('');
+  fpCtx.inputEl.focus();
+}
+function fpSelectOp(op){
+  if(!fpCtx) return;
+  clearTimeout(fpBlurTimer);
+  fpCtx.step='value'; fpCtx.pendingOp=op;
+  fpRender('');
+  fpCtx.inputEl.focus();
+}
+function fpSelectValue(value){
+  if(!fpCtx) return;
+  const f = { key:fpCtx.pendingKey, op:fpCtx.pendingOp, value };
+  fpAddFilter(f);
+}
+function fpAddFilter(f){
+  if(!f || (typeof f==='string' && !f.trim())) return;
+  const item = typeof f==='string' ? f.trim() : f;
+  const savedCtx = { ...fpCtx };
+  if(fpCtx.type==='outer'){
+    filters.push(item);
+  } else {
+    if(!metricFilters[fpCtx.svcId]) metricFilters[fpCtx.svcId]=[];
+    metricFilters[fpCtx.svcId].push(item);
+  }
+  fpCtx = { ...savedCtx, step:'key', pendingKey:null, pendingOp:null };
+  render();
+  // re-position after render (input may have moved)
+  setTimeout(()=>{
+    if(!fpCtx) return;
+    const inp = document.getElementById(savedCtx.inputEl.id||'filterInput');
+    if(inp) { fpCtx.inputEl=inp; fpRender(''); fpPosition(inp); }
+  }, 30);
+}
+
+document.getElementById('filterInput').addEventListener('focus', e => fpOpen(e,'outer',null));
+document.getElementById('filterInput').addEventListener('blur', fpBlur);
+document.getElementById('filterInput').addEventListener('input', e => fpInput(e.target.value));
+document.getElementById('filterInput').addEventListener('keydown', e => fpKeydown(e,'outer',null));
+
+function toggleService(id){ const s=services.find(x=>x.id===id); s.open=!s.open; saveState(); render(); }
+function toggleMetric(id,gi){ const s=services.find(x=>x.id===id); if(s.metrics[gi].source==='rec' && s.syncRec) return; s.metrics[gi].on=!s.metrics[gi].on; saveState(); render(); }
+
+// row selection (highlight)
+function rowClick(e,id,gi){ const s=services.find(x=>x.id===id); if(s.sel.has(gi)) s.sel.delete(gi); else s.sel.add(gi); render(); }
+function selectAll(id,val){ const s=services.find(x=>x.id===id); s.sel.clear(); if(val){ visibleFiltered(s).forEach(m=>s.sel.add(s.metrics.indexOf(m))); } render(); }
+function bulk(id,val){ const s=services.find(x=>x.id===id); [...s.sel].forEach(gi=>{ s.metrics[gi].on=val; }); saveState(); render(); }
+function removeSel(id){
+  const s=services.find(x=>x.id===id);
+  const toRemove=[...s.sel].filter(gi=>s.metrics[gi].source==='custom').map(gi=>s.metrics[gi]);
+  s.metrics = s.metrics.filter(m=>!toRemove.includes(m));
+  s.sel.clear(); saveState(); render(); showToast(toRemove.length+' custom metric'+(toRemove.length!==1?'s':'')+' removed');
+}
+
+function setMode(id, mode) {
+  const s = services.find(x => x.id === id);
+  s.autoOn = mode === 'auto';
+  if (mode === 'rec') {
+    s.syncRec = true;
+    s.metrics.forEach(m => { if(m.source === 'rec') m.on = true; });
+  } else if (mode === 'user') {
+    s.syncRec = false;
+  }
+  s.sel.clear();
+  saveState();
+  render();
+}
+
+function toggleSync(id, syncOn) {
+  const s = services.find(x => x.id === id);
+  s.syncRec = syncOn;
+  if (syncOn) s.metrics.forEach(m => { if(m.source === 'rec') m.on = true; });
+  saveState(); render();
+}
+
+function openModal(id){
+  document.getElementById('modal').classList.add('show');
+  resetModal();
+  const nsInput = document.getElementById('mNs');
+  if(id){
+    const svc = services.find(x => x.id === id);
+    if(svc){ nsInput.value = svc.ns; nsInput.disabled = true; }
+    updateMetricDropdown();
+  }
+  updateLinking();
+}
+function closeModal(){ document.getElementById('modal').classList.remove('show'); }
+function clearHint(id){ const el=document.getElementById(id); if(el){ el.textContent=''; el.className='hint'; } }
+function setErr(id, msg){ const el=document.getElementById(id); if(el){ el.textContent=msg; el.className='hint err'; } }
+function resetModal(){
+  const nsInput = document.getElementById('mNs');
+  nsInput.value = '';
+  nsInput.disabled = false;
+  document.getElementById('mLabels').value='';
+  document.getElementById('mAgg').value='';
+  ['mNsHint','mHint','mAggHint','mLabelsHint'].forEach(clearHint);
+  updateMetricDropdown();
+  updateLinking();
+}
+function updateMetricDropdown(){
+  const wrapper = document.getElementById('mNameWrapper');
+  const ns = document.getElementById('mNs').value.trim();
+  if (!ns) {
+    wrapper.innerHTML = '<input type="text" id="mName" disabled placeholder="Select a metric…">';
+    document.getElementById('mNameField').classList.add('field-locked');
+  } else if (knownByNs[ns]) {
+    const opts = knownByNs[ns].map(m=>`<div onmousedown="pickMetricName('${m.replace(/'/g,"\\'")}')">${m}</div>`).join('');
+    wrapper.innerHTML = `<div class="ns-field-wrap"><input type="text" id="mName" readonly placeholder="Select a metric…" onfocus="showMNameDropdown()" onblur="scheduleHideMNameDropdown()"><div id="mNameDropdown" class="ns-dropdown" style="display:none">${opts}</div></div>`;
+    document.getElementById('mNameField').classList.remove('field-locked');
+  } else {
+    wrapper.innerHTML = '<input type="text" id="mName" placeholder="Enter a metric name for this namespace">';
+    document.getElementById('mNameField').classList.remove('field-locked');
+  }
+  const mNameEl = document.getElementById('mName');
+  if(mNameEl){ mNameEl.addEventListener('change', ()=>clearHint('mHint')); mNameEl.addEventListener('input', ()=>clearHint('mHint')); }
+}
+document.getElementById('mNs').addEventListener('input', ()=>{ updateMetricDropdown(); });
+let nsHideTimer;
+function showNsDropdown(){ if(document.getElementById('mNs').disabled) return; clearTimeout(nsHideTimer); document.getElementById('nsDropdown').style.display='block'; }
+function scheduleHideNsDropdown(){ nsHideTimer=setTimeout(()=>{ document.getElementById('nsDropdown').style.display='none'; }, 150); }
+function pickNamespace(ns){ clearTimeout(nsHideTimer); document.getElementById('mNs').value=ns; document.getElementById('nsDropdown').style.display='none'; clearHint('mNsHint'); updateMetricDropdown(); }
+
+let mNameHideTimer;
+function showMNameDropdown(){ clearTimeout(mNameHideTimer); const d=document.getElementById('mNameDropdown'); if(d) d.style.display='block'; }
+function scheduleHideMNameDropdown(){ mNameHideTimer=setTimeout(()=>{ const d=document.getElementById('mNameDropdown'); if(d) d.style.display='none'; },150); }
+function pickMetricName(m){ clearTimeout(mNameHideTimer); document.getElementById('mName').value=m; const d=document.getElementById('mNameDropdown'); if(d) d.style.display='none'; clearHint('mHint'); }
+
+let labelsHideTimer;
+function showLabelsDropdown(){ clearTimeout(labelsHideTimer); document.getElementById('labelsDropdown').style.display='block'; }
+function scheduleHideLabelsDropdown(){ labelsHideTimer=setTimeout(()=>{ document.getElementById('labelsDropdown').style.display='none'; },150); }
+function pickLabel(l){ clearTimeout(labelsHideTimer); document.getElementById('mLabels').value=l; document.getElementById('labelsDropdown').style.display='none'; clearHint('mLabelsHint'); updateLinking(); }
+function updateLinking(){
+  const val=document.getElementById('mLabels').value, lc=document.getElementById('linkContent');
+  if(!val){ lc.style.color='var(--text-mute)'; lc.textContent='Add labels above to see matching entity types.'; return; }
+  lc.style.color='var(--text)';
+  lc.innerHTML='<div class="ent">GCP::Compute::Instance</div><div class="lbls">project_id, instance_id</div><div class="tag-enrich-row"><span class="check-badge">'+svg.check+'</span><span>Tag enrichment supported</span></div>';
+}
+function submitMetric(){
+  const nsName = document.getElementById('mNs').value.trim();
+  const name = (document.getElementById('mName')?.value||'').trim();
+  const agg = document.getElementById('mAgg').value.trim();
+  const label = document.getElementById('mLabels').value;
+  let valid = true;
+  if(!nsName){ setErr('mNsHint','This field is required'); valid=false; }
+  if(!name){ setErr('mHint','This field is required'); valid=false; }
+  if(!agg){ setErr('mAggHint','This field is required'); valid=false; }
+  if(!label){ setErr('mLabelsHint','This field is required'); valid=false; }
+  if(!valid) return;
+  let s=services.find(x=>x.ns===nsName);
+  if(!s){ s={ id:'ns'+Date.now(), name:nsName.split('.')[0].replace(/^\w/,c=>c.toUpperCase()), ns:nsName, open:true, syncRec:false, autoOn:false, sel:new Set(), metrics:[] }; services.push(s); }
+  s.metrics.push({ m:name, cat:'—', unit:'—', agg, tag:false, on:true, use:5, source:'custom' });
+  s.open=true; closeModal(); saveState(); render(); showToast('Custom metric added to ' + s.name);
+}
+function resetState(){ if(confirm('Reset to defaults? All changes will be lost.')) { localStorage.removeItem(STORAGE_KEY); location.reload(); } }
+function showToast(msg){
+  const t=document.getElementById('toast'); document.getElementById('toastMsg').textContent=msg;
+  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2400);
+}
+let activeKebab = null;
+function toggleKebab(e, svcId, gi) {
+  e.stopPropagation();
+  closeKebab();
+  const btn = e.currentTarget;
+  const menu = document.createElement('div');
+  menu.className = 'kebab-menu';
+  menu.innerHTML = `
+    <button onclick="editMetric('${svcId}',${gi})"><svg class="i" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>
+    <button class="danger-item" onclick="deleteMetric('${svcId}',${gi})"><svg class="i" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Delete</button>`;
+  btn.classList.add('open');
+  btn.parentElement.appendChild(menu);
+  activeKebab = { btn, menu };
+}
+function closeKebab() {
+  if (activeKebab) { activeKebab.btn.classList.remove('open'); activeKebab.menu.remove(); activeKebab = null; }
+}
+function deleteMetric(svcId, gi) {
+  closeKebab();
+  const s = services.find(x => x.id === svcId);
+  const name = s.metrics[gi].m;
+  s.metrics.splice(gi, 1);
+  s.sel.clear();
+  saveState(); render(); showToast('Removed: ' + name);
+}
+function editMetric(svcId, gi) {
+  closeKebab();
+  const s = services.find(x => x.id === svcId);
+  const m = s.metrics[gi];
+  const newName = prompt('Metric name:', m.m);
+  if (newName === null) return;
+  if (newName.trim()) { m.m = newName.trim(); saveState(); render(); }
+}
+document.addEventListener('click', e => {
+  closeKebab();
+  const panel = document.getElementById('fp');
+  if(panel && panel.style.display!=='none' && fpCtx && !panel.contains(e.target) && !fpCtx.inputEl.contains(e.target)) fpClose();
+});
+
+function toggleAllMetrics(id, val) {
+  const s = services.find(x => x.id === id);
+  visibleFiltered(s).forEach(m => { m.on = val; });
+  saveState(); render();
+}
+
+function toggleModeInfo(e) {
+  e.stopPropagation();
+  const p = document.getElementById('modeInfoPopover');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+function toggleIngestInfo(e, svcId) {
+  e.stopPropagation();
+  document.querySelectorAll('[id^="ingestInfoPopover-"]').forEach(p => { if(p.id !== 'ingestInfoPopover-'+svcId) p.style.display='none'; });
+  const p = document.getElementById('ingestInfoPopover-' + svcId);
+  if(p) p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+document.addEventListener('click', () => {
+  const p = document.getElementById('modeInfoPopover'); if(p) p.style.display='none';
+  document.querySelectorAll('[id^="ingestInfoPopover-"]').forEach(p => p.style.display='none');
+});
+render();
+
+// Prevent blur when clicking inside the filter panel (keeps input focused through key→op→value flow)
+// Stop click propagation so the document click handler doesn't close the panel mid-selection
+document.getElementById('fp').addEventListener('mousedown', e => e.preventDefault());
+document.getElementById('fp').addEventListener('click',     e => e.stopPropagation());
+</script>
+
+<script type="module">
+  import React from 'https://esm.sh/react@18';
+  import { createRoot } from 'https://esm.sh/react-dom@18/client';
+  import { Agentation } from 'https://esm.sh/agentation@3?deps=react@18,react-dom@18';
+  const params = new URLSearchParams(window.location.search);
+  const endpoint = params.get('endpoint') || 'http://localhost:4747';
+  const el = document.createElement('div');
+  document.body.appendChild(el);
+  createRoot(el).render(React.createElement(Agentation, {
+    endpoint,
+    onSessionCreated: (id) => console.log('Session started:', id)
+  }));
+</script>
+</body>
+</html>
