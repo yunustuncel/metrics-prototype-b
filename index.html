@@ -213,9 +213,8 @@
       <th>Service</th><th style="position:relative"><span class="th-with-info">Metric collection mode<button class="info-btn" onclick="toggleModeInfo(event)" aria-label="Mode info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="8" stroke-linecap="round"/><line x1="12" y1="11" x2="12" y2="17" stroke-linecap="round"/></svg></button></span>
         <div class="info-popover" id="modeInfoPopover" style="display:none;top:36px;left:0;">
           <h4>Metric collection modes</h4>
-          <div class="mode-row"><div class="mode-name">Recommended</div><div class="mode-desc">All recommended metrics active and synced with Dynatrace. Adding opt-in or custom metrics shifts the label to User-defined.</div></div>
-          <div class="mode-row"><div class="mode-name">User-defined</div><div class="mode-desc">Customize your metric set freely. Use the Dynatrace sync toggle in this row to return to auto-management.</div></div>
-          <div class="mode-row"><div class="mode-name">Autodiscovery</div><div class="mode-desc">Ingests all discovered metrics automatically. Best for full coverage.</div></div>
+          <div class="mode-row"><div class="mode-name">User-defined</div><div class="mode-desc">Customize which metrics to collect. Use the Dynatrace sync toggle to lock recommended metrics on (Dynatrace-managed) or turn it off to control each one individually.</div></div>
+          <div class="mode-row"><div class="mode-name">Autodiscovery</div><div class="mode-desc">Ingests all discovered metrics automatically. Best for full coverage with no manual selection.</div></div>
         </div>
       </th>
       <th class="center" style="position:relative">
@@ -406,11 +405,7 @@ function visibleMetrics(s){
 }
 
 function getModeValue(s) {
-  if (s.autoOn) return 'auto';
-  const hasOptIn = s.metrics.some(m => m.source === 'avail' && m.on);
-  const hasCustom = s.metrics.some(m => m.source === 'custom');
-  if (s.syncRec && !hasOptIn && !hasCustom) return 'rec';
-  return 'user';
+  return s.autoOn ? 'auto' : 'user';
 }
 const sourceOrder = { rec: 0, custom: 1, avail: 2, disc: 3 };
 function visibleFiltered(s){
@@ -514,7 +509,7 @@ function render(){
           <div><div class="svc-name">${s.name}</div><div class="svc-ns">${s.ns}</div></div>
         </div>
       </td>
-      <td onclick="event.stopPropagation()">${(()=>{ const mv=getModeValue(s); return `<select class="mode-select" onchange="setMode('${s.id}', this.value)"><option value="rec" ${mv==='rec'?'selected':''}>Recommended</option><option value="user" ${mv==='user'?'selected':''}>User-defined</option><option value="auto" ${mv==='auto'?'selected':''}>Autodiscovery</option></select>`; })()}</td>
+      <td onclick="event.stopPropagation()"><select class="mode-select" onchange="setMode('${s.id}', this.value)"><option value="user" ${!s.autoOn?'selected':''}>User-defined</option><option value="auto" ${s.autoOn?'selected':''}>Autodiscovery</option></select></td>
       <td onclick="event.stopPropagation()" style="text-align:center">${s.autoOn ? '<span style="color:var(--text-mute)">—</span>' : `<button class="toggle ${s.syncRec?'on':''}" onclick="event.stopPropagation();toggleSync('${s.id}',${!s.syncRec})" title="${s.syncRec?'Sync on — click to disable':'Sync off — click to enable'}"><span class="knob"></span></button>`}</td>
       <td style="text-align:center">${s.autoOn ? '<span style="color:var(--text-mute)">—</span>' : `<span class="metric-count"><span class="n grey">${recEnabled}</span><span class="sep">/</span><span class="total">${recTotal}</span></span>`}</td>
       <td style="text-align:center">${s.autoOn ? '<span style="color:var(--text-mute)">—</span>' : `<span class="metric-count"><span class="n grey">${availEnabled}</span><span class="sep">/</span><span class="total">${availTotal}</span></span>`}</td>
@@ -668,12 +663,6 @@ function removeSel(id){
 function setMode(id, mode) {
   const s = services.find(x => x.id === id);
   s.autoOn = mode === 'auto';
-  if (mode === 'rec') {
-    s.syncRec = true;
-    s.metrics.forEach(m => { if(m.source === 'rec') m.on = true; });
-  } else if (mode === 'user') {
-    s.syncRec = false;
-  }
   s.sel.clear();
   saveState();
   render();
