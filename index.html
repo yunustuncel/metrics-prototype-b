@@ -452,24 +452,8 @@ function render(){
         <td class="row-menu-cell" onclick="event.stopPropagation()">${m.source==='custom' ? `<button class="kebab-btn" onclick="toggleKebab(event,'${s.id}',${gi})"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button>` : ''}</td>
       </tr>`;
     };
-    const recVf = vf.filter(m => m.source === 'rec');
-    const optInVf = vf.filter(m => m.source === 'avail');
     const customVf = vf.filter(m => m.source === 'custom');
-    let rows = '';
-    if (!s.autoOn && s.metrics.some(m => m.source === 'rec')) {
-      const recTotal = s.metrics.filter(m => m.source === 'rec').length;
-      rows += `<tr class="section-sub-row"><td colspan="9" style="padding:0"><div class="section-sub-head"><span>Recommended <span class="section-count">${recTotal}</span></span></div></td></tr>`;
-      rows += recVf.map(renderMetricRow).join('');
-    }
-    if (!s.autoOn && s.metrics.some(m => m.source === 'avail')) {
-      const optInTotal = s.metrics.filter(m => m.source === 'avail').length;
-      rows += `<tr class="section-sub-row"><td colspan="9" style="padding:0"><div class="section-sub-head"><span>Opt-in <span class="section-count">${optInTotal}</span></span></div></td></tr>`;
-      rows += optInVf.map(renderMetricRow).join('');
-    }
-    if (customVf.length) {
-      rows += `<tr class="section-sub-row"><td colspan="9" style="padding:0"><div class="section-sub-head"><span>Custom <span class="section-count">${customVf.length}</span></span></div></td></tr>`;
-      rows += customVf.map(renderMetricRow).join('');
-    }
+    let rows = vf.map(renderMetricRow).join('');
     if (!rows && s.autoOn) rows = '<tr><td colspan="9" class="empty">No custom metrics yet. Use "+ Add metric" to add one.</td></tr>';
     else if (!rows) rows = '<tr><td colspan="9" class="empty">No metrics match the current filter.</td></tr>';
 
