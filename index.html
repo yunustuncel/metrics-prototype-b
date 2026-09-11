@@ -53,7 +53,7 @@
   .info-popover .mode-name { font-weight: 600; color: var(--accent-text); margin-bottom: 2px; }
   .info-popover .mode-desc { color: var(--text-dim); }
   .mode-select:focus { border-color: var(--accent); }
-  .outer-tbl thead th { text-align: left; font-size: 11px; font-weight: 500; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; padding: 13px 15px; border-bottom: 1px solid var(--border); background: var(--panel-2); vertical-align: middle; }
+  .outer-tbl thead th { text-align: left; font-size: 11px; font-weight: 500; color: var(--text-dim); padding: 13px 15px; border-bottom: 1px solid var(--border); background: var(--panel-2); vertical-align: middle; }
   .outer-tbl thead th.center { text-align: center; }
 
   .svc-summary { cursor: pointer; }
@@ -99,7 +99,7 @@
   .fp-breadcrumb { display:flex; align-items:center; gap:6px; padding:8px 14px; background:var(--panel-2); border-bottom:1px solid var(--border); font-size:12px; color:var(--text-dim); }
   .fp-breadcrumb .fp-bc-seg { color:var(--accent-text); font-weight:500; }
   .fp-breadcrumb .fp-bc-sep { color:var(--text-mute); }
-  .fp-section { font-size:10px; color:var(--text-mute); text-transform:uppercase; letter-spacing:.5px; padding:8px 14px 4px; }
+  .fp-section { font-size:10px; color:var(--text-mute); padding:8px 14px 4px; }
   .fp-item { display:flex; align-items:center; gap:10px; padding:8px 14px; cursor:pointer; font-size:13px; color:var(--text); }
   .fp-item:hover { background:var(--row-hover); }
   .fp-item.fp-active { background:var(--row-hover); }
@@ -113,7 +113,7 @@
   .sel-count { color: var(--text-dim); font-size: 12px; margin-right: 4px; }
 
   table.inner-tbl { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  table.inner-tbl thead th { text-align: left; font-size: 11px; font-weight: 500; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; padding: 9px 15px; border-bottom: 1px solid var(--border); }
+  table.inner-tbl thead th { text-align: left; font-size: 11px; font-weight: 500; color: var(--text-dim); padding: 9px 15px; border-bottom: 1px solid var(--border); }
   table.inner-tbl tbody td { padding: 10px 15px; border-bottom: 1px solid var(--border); font-size: 12px; vertical-align: middle; }
   table.inner-tbl tbody tr:last-child td { border-bottom: none; }
   table.inner-tbl tbody tr:hover { background: var(--row-hover); }
@@ -182,7 +182,7 @@
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   svg.i { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: middle; }
   .section-sub-row td { border-bottom: 1px solid var(--border); }
-  .section-sub-head { display: flex; align-items: center; justify-content: space-between; padding: 7px 15px; background: var(--panel-2); font-size: 11px; color: var(--text-dim); font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
+  .section-sub-head { display: flex; align-items: center; justify-content: space-between; padding: 7px 15px; background: var(--panel-2); font-size: 11px; color: var(--text-dim); font-weight: 500; }
   .section-count { background: var(--border-strong); color: var(--text); border-radius: 10px; padding: 0 6px; font-size: 10px; font-weight: 600; margin-left: 5px; }
   .sync-toggle-label { display: flex; align-items: center; gap: 7px; text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--text); font-size: 12px; cursor: pointer; user-select: none; }
   .sync-toggle-label .toggle { flex-shrink: 0; }
@@ -499,7 +499,7 @@ function render(){
         </div>
       </td>
       <td onclick="event.stopPropagation()"><select class="mode-select" onchange="setMode('${s.id}', this.value)"><option value="user" ${!s.autoOn?'selected':''}>User-defined</option><option value="auto" ${s.autoOn?'selected':''}>Autodiscovery</option></select></td>
-      <td onclick="event.stopPropagation()" style="text-align:center">${s.autoOn ? '<span style="color:var(--text-mute)">—</span>' : `<button class="toggle ${s.syncRec?'on':''}" onclick="event.stopPropagation();toggleSync('${s.id}',${!s.syncRec})" title="${s.syncRec?'Sync on — click to disable':'Sync off — click to enable'}"><span class="knob"></span></button>`}</td>
+      <td onclick="event.stopPropagation()" style="text-align:left">${s.autoOn ? '<span style="color:var(--text-mute)">—</span>' : `<button class="toggle ${s.syncRec?'on':''}" onclick="event.stopPropagation();toggleSync('${s.id}',${!s.syncRec})" title="${s.syncRec?'Sync on — click to disable':'Sync off — click to enable'}"><span class="knob"></span></button>`}</td>
       <td style="text-align:center">${s.autoOn ? '<span style="color:var(--text-mute)">—</span>' : `<span class="metric-count"><span class="n grey">${recEnabled}</span><span class="sep">/</span><span class="total">${recTotal}</span></span>`}</td>
       <td style="text-align:center">${s.autoOn ? '<span style="color:var(--text-mute)">—</span>' : `<span class="metric-count"><span class="n grey">${availEnabled}</span><span class="sep">/</span><span class="total">${availTotal}</span></span>`}</td>
       <td style="text-align:center">${s.autoOn ? '<span style="color:var(--text-mute)">—</span>' : `<span class="metric-count"><span class="n grey">${customEnabled}</span><span class="sep">/</span><span class="total">${customTotal}</span></span>`}</td>
